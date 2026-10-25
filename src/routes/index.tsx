@@ -8,7 +8,7 @@ import {
 	VolumeX,
 	WandSparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Price, ProductCard } from "#/components/product-card";
 import { TikTokEmbed } from "#/components/tiktok-embed";
 import { WhatsAppButton } from "#/components/whatsapp-button";
@@ -22,13 +22,35 @@ export const Route = createFileRoute("/")({
 	component: Home,
 });
 
-// Shop photo first, then the category photo, then the general hero shot.
-function backdrop(product: Product) {
-	return (
-		(product.images[0] && imageUrl(product.images[0], 2400)) ??
-		getCategory(product.category)?.image ??
-		"/images/hero.jpg"
-	);
+const scenes = [
+	"/images/hero.jpg",
+	"/images/install.jpg",
+	"/images/panels.jpg",
+];
+
+// One backdrop per slide: the shop photo first. Products without one get their category
+// photo or a solar scene, never the same as the slide before or after, so the hero
+// always changes.
+function backdrops(products: Product[]) {
+	const picked: string[] = [];
+	const uses = new Map<string, number>();
+	products.forEach((product, i) => {
+		const photo = product.images[0] && imageUrl(product.images[0], 2400);
+		const category = getCategory(product.category)?.image;
+		const options = photo
+			? [photo]
+			: [...new Set([category ?? scenes[0], ...scenes])];
+		const isLast = i === products.length - 1 && i > 0;
+		const fresh = options.filter(
+			(o) => o !== picked[i - 1] && !(isLast && o === picked[0]),
+		);
+		const choice = (fresh.length ? fresh : options).reduce((best, o) =>
+			(uses.get(o) ?? 0) < (uses.get(best) ?? 0) ? o : best,
+		);
+		uses.set(choice, (uses.get(choice) ?? 0) + 1);
+		picked.push(choice);
+	});
+	return picked;
 }
 
 function Home() {
@@ -46,10 +68,15 @@ function Home() {
 }
 
 function Showcase() {
-	const showcase = useProducts().filter((p) => p.featured);
+	const products = useProducts();
+	const showcase = useMemo(
+		() => products.filter((p) => p.featured),
+		[products],
+	);
 	const [index, setIndex] = useState(0);
 	const product = showcase[index % showcase.length];
 	const count = showcase.length;
+	const backdrop = useMemo(() => backdrops(showcase), [showcase]);
 	const go = useCallback(
 		(step: number) => setIndex((i) => (i + step + count) % count),
 		[count],
@@ -69,8 +96,8 @@ function Showcase() {
 	return (
 		<section className="relative isolate -mt-18 flex h-svh min-h-[640px] flex-col overflow-hidden md:-mt-20">
 			<img
-				key={backdrop(product)}
-				src={backdrop(product)}
+				key={backdrop[index % count]}
+				src={backdrop[index % count]}
 				alt=""
 				className="absolute inset-0 -z-10 size-full animate-fade-in object-cover"
 			/>
