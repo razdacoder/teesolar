@@ -56,7 +56,10 @@ async function seedAdmin() {
 }
 
 async function run() {
-	await migrate(db, { migrationsFolder: "drizzle" });
+	// Vercel functions don't ship the drizzle/ folder, so there `vercel-build` migrates instead.
+	if (!process.env.VERCEL) {
+		await migrate(db, { migrationsFolder: "drizzle" });
+	}
 	await seedCatalog();
 	await seedAdmin();
 }
