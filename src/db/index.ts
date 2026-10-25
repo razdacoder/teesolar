@@ -8,7 +8,8 @@ if (!url)
 
 // Reuse one pool across Vite hot reloads instead of opening a new one per edit.
 const globalForDb = globalThis as unknown as { pg?: postgres.Sql };
-const client = globalForDb.pg ?? postgres(url);
+// onnotice: the migrator's "already exists, skipping" notices are noise on every start.
+const client = globalForDb.pg ?? postgres(url, { onnotice: () => {} });
 if (process.env.NODE_ENV !== "production") globalForDb.pg = client;
 
 export const db = drizzle(client, { schema, casing: "snake_case" });

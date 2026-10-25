@@ -20,6 +20,14 @@ pnpm db:migrate             # apply migrations in drizzle/
 pnpm db:seed                # load the starter catalog (safe to re-run)
 ```
 
+When the server starts (`src/server.ts` → `src/db/bootstrap.ts`) it does this for you before serving requests:
+
+1. Applies pending migrations from `drizzle/` (the folder must ship with the deploy).
+2. Loads the starter catalog if the `products` table is empty. Products you delete don't come back.
+3. Creates an admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD` (and optional `ADMIN_NAME`) if no admin exists yet.
+
+If any step fails, the server doesn't start.
+
 - Schema: `src/db/schema.ts`. After changing it, run `pnpm db:generate` and then `pnpm db:migrate`.
 - Server functions: `src/server/products.ts`. Query options and mutations: `src/queries/products.ts`.
 - Every stock change is written to `stock_movements`, and `products.stock` is updated in the same transaction.
